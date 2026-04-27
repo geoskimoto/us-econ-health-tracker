@@ -1,0 +1,14 @@
+{% load plotly_dash %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>US Economy Tracker</title>
+    {% plotly_header %}
+</head>
+<body style="margin:0; background:#f8f9fa;">
+    {% plotly_app name="EconDashboard" ratio=1 %}
+    {% plotly_footer %}
+</body>
+</html>

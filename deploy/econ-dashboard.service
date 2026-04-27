@@ -1,0 +1,21 @@
+[Unit]
+Description=US Economy Tracker (Django/Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=geoskimoto
+Group=geoskimoto
+WorkingDirectory=/home/geoskimoto/projects/current_stock_of_econ
+EnvironmentFile=/home/geoskimoto/projects/current_stock_of_econ/.env
+ExecStart=/home/geoskimoto/projects/current_stock_of_econ/venv/bin/gunicorn \
+    --bind 127.0.0.1:8095 \
+    --workers 2 \
+    --timeout 120 \
+    --preload \
+    config.wsgi:application
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

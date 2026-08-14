@@ -134,6 +134,14 @@ CHANNEL_LAYERS = {
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
 
+# Extra Dash component libraries to collect into staticfiles. The finder's
+# built-ins only cover the dash and plotly packages themselves.
+PLOTLY_COMPONENTS = [
+    "dash_bootstrap_components",
+    "dpd_components",
+    "dpd_static_support",
+]
+
 PLOTLY_DASH = {
     # Serve Dash component JS from local staticfiles. CDN mode (serve_locally
     # False) is broken with Dash 2.x: the npm packages on unpkg don't bundle

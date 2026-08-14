@@ -34,6 +34,447 @@ _PLOT_LAYOUT = dict(
     legend={"orientation": "h", "yanchor": "bottom", "y": 1.01, "x": 0, "font": {"size": 11}},
 )
 
+# ─── Indicator descriptions per tab ───────────────────────────────────────────
+
+MACRO_INDICATOR_INFO = {
+    "gdp": {
+        "name": "Real GDP Growth Rate (annualized %)",
+        "source": "FRED: A191RL1Q225SBEA — quarterly",
+        "what": (
+            "Inflation-adjusted quarterly GDP growth, annualized. "
+            "The broadest single measure of economic output."
+        ),
+        "watch": (
+            "Above 2%: healthy expansion | Below 1%: slowdown | "
+            "Two consecutive negative quarters: technical recession"
+        ),
+        "limitation": (
+            "Quarterly frequency means recessions are confirmed 1–2 quarters late. "
+            "Subject to significant revision."
+        ),
+    },
+    "inflation": {
+        "name": "CPI, Core CPI & Core PCE Year-over-Year %",
+        "source": "FRED: CPIAUCSL, CPILFESL, PCEPILFE — monthly",
+        "what": (
+            "Headline CPI includes food and energy. Core strips those out. "
+            "Core PCE is the Fed's preferred inflation target (2%)."
+        ),
+        "watch": (
+            "Below 2.5%: approaching target | 2.5–4%: elevated | "
+            "Above 4%: high — pressure on Fed to remain restrictive"
+        ),
+        "limitation": (
+            "Shelter inflation in CPI lags real-time market rents by 12–18 months. "
+            "Basket weights are updated with a lag."
+        ),
+    },
+    "fed_funds": {
+        "name": "Federal Funds Rate (%)",
+        "source": "FRED: FEDFUNDS — monthly effective rate",
+        "what": (
+            "Overnight interbank lending rate set by the FOMC. "
+            "Primary lever for managing inflation and employment."
+        ),
+        "watch": (
+            "Rising: restrictive — suppresses inflation and growth | "
+            "Falling: accommodative — stimulus mode"
+        ),
+        "limitation": (
+            "Rate changes transmit to the real economy with a 12–18 month lag. "
+            "A lagging policy tool, not a leading economic indicator."
+        ),
+    },
+    "m2": {
+        "name": "M2 Money Supply YoY %",
+        "source": "FRED: M2SL — monthly",
+        "what": (
+            "Broad money supply: cash, checking, savings, and money market funds. "
+            "Rapid M2 growth can be inflationary; contraction is historically rare."
+        ),
+        "watch": (
+            "Positive YoY: liquidity expanding | Negative YoY: tightening — "
+            "occurred 2022–23 for the first time since 1930s"
+        ),
+        "limitation": (
+            "Relationship between M2 and inflation is unstable over time. "
+            "Useful as context, not a direct predictor."
+        ),
+    },
+    "trade": {
+        "name": "Trade Balance ($M)",
+        "source": "FRED: BOPGSTB — monthly BEA",
+        "what": (
+            "Net exports of goods and services. "
+            "Deficit = imports exceed exports."
+        ),
+        "watch": (
+            "Narrowing deficit: domestic production improving or dollar weakening | "
+            "Widening: strong domestic demand absorbing imports"
+        ),
+        "limitation": (
+            "Sensitive to dollar strength and global demand cycles. "
+            "A trade deficit is not inherently negative for growth."
+        ),
+    },
+    "debt_gdp": {
+        "name": "Federal Debt to GDP (%)",
+        "source": "FRED: GFDEGDQ188S — quarterly Treasury/BEA",
+        "what": (
+            "Total federal debt as a share of GDP. "
+            "Broad measure of fiscal sustainability."
+        ),
+        "watch": (
+            "Below 60%: low concern | 60–100%: moderate | "
+            "Above 100%: elevated — US is currently in this range"
+        ),
+        "limitation": (
+            "Threshold levels are contested. The US borrows in its own currency, "
+            "which reduces but does not eliminate long-run fiscal risk."
+        ),
+    },
+}
+
+LABOR_INDICATOR_INFO = {
+    "u3_u6": {
+        "name": "U-3 & U-6 Unemployment Rates (%)",
+        "source": "FRED: UNRATE (U-3), U6RATE (U-6) — monthly BLS CPS",
+        "what": (
+            "U-3: officially unemployed. "
+            "U-6: adds discouraged workers and involuntary part-timers. "
+            "U-6 is the broader, more complete measure."
+        ),
+        "watch": (
+            "U-3 below 4%: tight labor market | U-3 above 5%: slack building | "
+            "U-6/U-3 gap widening: quality of employment deteriorating"
+        ),
+        "limitation": (
+            "Neither metric captures people who've fully stopped searching "
+            "or gig workers who are economically underemployed."
+        ),
+    },
+    "initial_claims": {
+        "name": "Initial Jobless Claims (weekly, thousands)",
+        "source": "FRED: ICSA — weekly DOL UI filings",
+        "what": (
+            "New unemployment insurance filings. The most timely labor market signal — "
+            "published weekly, 4-day lag."
+        ),
+        "watch": (
+            "Below 250K: strong labor market | 250–300K: normalizing | "
+            "Above 350K: deteriorating | 4-week trend matters more than any single week"
+        ),
+        "limitation": (
+            "Affected by seasonality, weather, and eligibility rule changes. "
+            "High-frequency noise; always interpret using the 4-week moving average."
+        ),
+    },
+    "lfpr": {
+        "name": "Labor Force Participation Rate (%)",
+        "source": "FRED: CIVPART (overall), LNS11300060 (prime-age 25–54) — monthly BLS",
+        "what": (
+            "Share of working-age population employed or actively seeking work. "
+            "Prime-age (25–54) filters out retirement-driven demographic decline."
+        ),
+        "watch": (
+            "Prime-age LFPR near pre-pandemic peak (~83%): fully recovered | "
+            "Declining: hidden labor slack — may suppress wage growth"
+        ),
+        "limitation": (
+            "Long-run demographic trends structurally lower the headline LFPR. "
+            "Use prime-age as the cleaner cyclical signal."
+        ),
+    },
+    "jolts": {
+        "name": "JOLTS — Openings, Hires, Quits, Layoffs (thousands)",
+        "source": "FRED: JTSJOL, JTSHIL, JTSQUL, JTSLDL — monthly BLS, ~2-month lag",
+        "what": (
+            "Openings = unmet labor demand. Quits = worker confidence in finding better jobs. "
+            "Layoffs = employer stress. Together they paint a full picture of labor flows."
+        ),
+        "watch": (
+            "Openings above 8M: very tight | Quits rate above 2.5%: workers have bargaining power | "
+            "Layoffs rising: early deterioration — often leads claims by 1–2 months"
+        ),
+        "limitation": (
+            "2-month publication lag. Opening counts don't distinguish "
+            "active recruiting from posted-but-neglected positions."
+        ),
+    },
+    "beveridge": {
+        "name": "Beveridge Curve (Openings vs Unemployment)",
+        "source": "FRED: JTSJOL × UNRATE — monthly, plotted as scatter",
+        "what": (
+            "Scatter of job openings vs unemployment over time. "
+            "An upward shift of the curve indicates structural mismatch. "
+            "Movement toward the origin = market cooling."
+        ),
+        "watch": (
+            "Upper-left (high openings, low unemployment): extremely tight | "
+            "Lower-right: slack building | Curve shifting up: skills or geography mismatch"
+        ),
+        "limitation": (
+            "Curve shifts can reflect structural changes (remote work, skills mismatch) "
+            "that are difficult to disentangle from cyclical labor market conditions."
+        ),
+    },
+    "sahm": {
+        "name": "Sahm Rule Indicator",
+        "source": "FRED: SAHMREALTIME — monthly BLS/FRED calculation",
+        "what": (
+            "3-month average unemployment rate minus the prior 12-month low. "
+            "Values ≥ 0.5 have historically coincided with the start of every US recession since 1970."
+        ),
+        "watch": (
+            "Below 0.3: low near-term risk | 0.3–0.5: warning zone — monitor closely | "
+            "≥ 0.5: recession signal triggered"
+        ),
+        "limitation": (
+            "Backward-looking — triggers after a recession has already begun. "
+            "Designed for real-time calling, not forecasting. "
+            "One false signal (2019) exists in the historical record."
+        ),
+    },
+}
+
+HOUSING_INDICATOR_INFO = {
+    "starts_permits": {
+        "name": "Housing Starts & Building Permits (thousands, annualized)",
+        "source": "FRED: HOUST, PERMIT — monthly Census Bureau",
+        "what": (
+            "Starts = construction newly begun. "
+            "Permits lead starts by 1–3 months and are the more forward-looking signal."
+        ),
+        "watch": (
+            "Starts above 1.5M: healthy construction | Below 1.0M: significant weakness | "
+            "Permits diverging above starts: pipeline building"
+        ),
+        "limitation": (
+            "Highly weather-sensitive. Single-family vs multi-family mix matters — "
+            "a multi-family surge has different economic implications than single-family."
+        ),
+    },
+    "mortgage": {
+        "name": "30-Year Fixed Mortgage Rate (%)",
+        "source": "FRED: MORTGAGE30US — weekly Freddie Mac PMMS",
+        "what": (
+            "Benchmark rate for home purchase financing. "
+            "Directly determines monthly payment and purchasing power for buyers."
+        ),
+        "watch": (
+            "Below 5%: broadly affordable | 5–7%: moderate restraint on demand | "
+            "Above 7%: significant affordability stress — reduces buyer pool"
+        ),
+        "limitation": (
+            "Lock-in effect: existing homeowners with low rates won't sell, reducing supply. "
+            "Rate matters in context of incomes and home prices, not in isolation."
+        ),
+    },
+    "case_shiller": {
+        "name": "Case-Shiller National Home Price Index",
+        "source": "FRED: CSUSHPISA — monthly, 2-month publication lag",
+        "what": (
+            "Repeat-sale price index tracking the same properties over time. "
+            "Isolates price changes from compositional shifts in what's being sold."
+        ),
+        "watch": (
+            "Sustained rises: appreciation continuing | Flat or declining: correction underway | "
+            "YoY below 0: outright home price deflation — historically rare"
+        ),
+        "limitation": (
+            "2-month lag. National average masks large regional variation. "
+            "Does not reflect rental market conditions."
+        ),
+    },
+    "case_shiller_yoy": {
+        "name": "Case-Shiller YoY % Change",
+        "source": "FRED: CSUSHPISA pct_change(12) — monthly",
+        "what": (
+            "Annual rate of home price appreciation or depreciation. "
+            "Useful for identifying turning points in the housing cycle."
+        ),
+        "watch": (
+            "Above 5%: rapid appreciation, affordability risk | Near 0%: stabilizing | "
+            "Negative: price decline underway"
+        ),
+        "limitation": (
+            "YoY can appear flat during a soft landing if appreciation slows without reversing. "
+            "Negative readings are historically rare outside recessions."
+        ),
+    },
+}
+
+MARKETS_INDICATOR_INFO = {
+    "equities": {
+        "name": "S&P 500 & Russell 2000",
+        "source": "yfinance: ^GSPC (large-cap S&P 500), ^RUT (small-cap Russell 2000)",
+        "what": (
+            "SPX tracks large-cap US equities; RUT tracks small-caps. "
+            "Comparing them reveals the breadth of equity market participation."
+        ),
+        "watch": (
+            "RUT outperforming SPX: risk appetite is broad-based | "
+            "RUT underperforming: defensive rotation or credit stress | "
+            "SPX new highs without RUT: narrow, potentially fragile leadership"
+        ),
+        "limitation": (
+            "Equity markets are forward-looking but frequently wrong. "
+            "Short-term price action is driven by positioning and flows, not just fundamentals."
+        ),
+    },
+    "vix": {
+        "name": "VIX — CBOE Volatility Index",
+        "source": "yfinance: ^VIX — daily CBOE 30-day implied vol",
+        "what": (
+            "30-day implied volatility derived from S&P 500 options. "
+            "Measures market uncertainty — often called the 'fear gauge.'"
+        ),
+        "watch": (
+            "Below 15: complacent | 15–20: normal | 20–30: elevated uncertainty | "
+            "Above 30: high stress | Spikes above 40: panic or crisis"
+        ),
+        "limitation": (
+            "Measures options pricing (implied vol), not realized volatility. "
+            "VIX can remain elevated for months in genuine bear markets — mean reversion is not guaranteed."
+        ),
+    },
+    "yield_curve": {
+        "name": "Yield Curve Snapshot (current maturities)",
+        "source": "FRED: DGS3MO, DGS2, DGS10, DGS30 — daily Treasury CMT",
+        "what": (
+            "Current yield at 3M, 2Y, 10Y, 30Y maturities. "
+            "Normal curve slopes upward. Inversion = short rates above long rates."
+        ),
+        "watch": (
+            "Normal upward slope: healthy growth expectations | "
+            "Flat: market pricing stagnation | Inverted: recession leading indicator"
+        ),
+        "limitation": (
+            "Fed QE/QT and foreign demand for Treasuries can suppress long rates, "
+            "complicating the traditional inversion signal."
+        ),
+    },
+    "spreads": {
+        "name": "Yield Curve Spreads — 10Y-2Y and 10Y-3M (pp)",
+        "source": "FRED: DGS10 − DGS2, DGS10 − DGS3MO — daily",
+        "what": (
+            "10Y-3M spread (NY Fed recession model) is the stronger historical predictor. "
+            "10Y-2Y is more widely watched by practitioners."
+        ),
+        "watch": (
+            "10Y-3M below 0 pp: inversion — has preceded every US recession since 1970 | "
+            "Steepening after inversion: may signal imminent recession (bull steepening)"
+        ),
+        "limitation": (
+            "Inversion must be sustained — days don't count. "
+            "Lead time to recession ranges from 6 to 24 months, with high variance."
+        ),
+    },
+    "commodities": {
+        "name": "WTI Crude Oil & Gold",
+        "source": "yfinance: CL=F (WTI crude), GC=F (gold)",
+        "what": (
+            "Crude reflects global growth expectations and supply dynamics. "
+            "Gold is a safe-haven asset and inflation hedge."
+        ),
+        "watch": (
+            "Crude rising: growth optimism or supply tightening | "
+            "Crude falling sharply: demand destruction | "
+            "Gold rising amid falling equities: risk-off positioning"
+        ),
+        "limitation": (
+            "Both are heavily influenced by geopolitical supply shocks (OPEC+, sanctions) "
+            "that are unrelated to US domestic economic conditions."
+        ),
+    },
+    "copper_gold": {
+        "name": "Copper/Gold Ratio — Economic Activity Proxy",
+        "source": "yfinance: HG=F / GC=F × 100",
+        "what": (
+            "Copper is industrial; gold is a safe haven. "
+            "A rising ratio signals growth expectations outpacing fear. "
+            "Falling ratio signals flight to safety."
+        ),
+        "watch": (
+            "Rising: economically constructive, global demand expanding | "
+            "Falling: risk-off, growth concerns | "
+            "Diverging from equities: potential leading indicator of equity direction"
+        ),
+        "limitation": (
+            "Can move on copper supply disruptions (mining strikes, reserve changes) "
+            "unrelated to economic growth expectations."
+        ),
+    },
+}
+
+CONSUMER_INDICATOR_INFO = {
+    "umich": {
+        "name": "University of Michigan Consumer Sentiment",
+        "source": "FRED: UMCSENT — monthly U of M survey (~500 households)",
+        "what": (
+            "Survey of consumer confidence in personal finances and the broader economy. "
+            "Scale roughly 0–120; historical average ~85."
+        ),
+        "watch": (
+            "Above 90: strong confidence | 70–90: moderate | "
+            "Below 70: pessimistic | Sharp drops: leading indicator of spending pullback"
+        ),
+        "limitation": (
+            "Surveys measure mood, not spending. Sentiment and actual consumption can diverge — "
+            "consumers can feel pessimistic yet keep spending."
+        ),
+    },
+    "retail": {
+        "name": "Retail Sales YoY %",
+        "source": "FRED: RSAFS — monthly Census Bureau advance retail trade survey",
+        "what": (
+            "Year-over-year change in retail and food service sales. "
+            "Proxy for consumer spending, which drives ~70% of US GDP."
+        ),
+        "watch": (
+            "Above 3%: healthy spending growth | Near 0%: stagnating | "
+            "Negative: contraction — often precedes or accompanies recession"
+        ),
+        "limitation": (
+            "Nominal (not inflation-adjusted). High inflation produces positive nominal growth "
+            "even when real spending is flat or declining."
+        ),
+    },
+    "savings": {
+        "name": "Personal Savings Rate (%)",
+        "source": "FRED: PSAVERT — monthly BEA personal income accounts",
+        "what": (
+            "Personal savings as a percent of disposable income. "
+            "Low savings means consumers are spending down financial buffers."
+        ),
+        "watch": (
+            "Above 6%: consumers rebuilding cushion | 3–6%: normal consumption mode | "
+            "Below 3%: stretched — spending may not be sustainable without income gains"
+        ),
+        "limitation": (
+            "Volatile around income timing events (tax refunds, bonuses, stimulus). "
+            "Doesn't capture wealth-effect spending from rising home or equity values."
+        ),
+    },
+    "industrial": {
+        "name": "Industrial Production YoY % & Capacity Utilization (%)",
+        "source": "FRED: INDPRO, TCU — monthly Federal Reserve G.17 release",
+        "what": (
+            "Industrial output change vs a year ago, plus what fraction of factory/utility "
+            "capacity is currently in use. Together measure manufacturing sector health."
+        ),
+        "watch": (
+            "INDPRO positive YoY: manufacturing expanding | "
+            "Capacity utilization above 80%: tight, upward pressure on goods prices | "
+            "Below 75%: significant slack"
+        ),
+        "limitation": (
+            "Manufacturing is ~10% of US GDP. Services dominate the modern economy, "
+            "so industrial indicators are less predictive than in prior decades."
+        ),
+    },
+}
+
 # ─── App initialisation ───────────────────────────────────────────────────────
 
 app = DjangoDash(
@@ -62,6 +503,12 @@ def _line_chart(series_dict: dict, title: str = "", height: int = 350) -> go.Fig
     return fig
 
 
+def _hex_alpha(hex_color: str, alpha: float) -> str:
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
 def _gauge(value: float | None, title: str, max_val: float = 100,
            low_color: str = C_RED, high_color: str = C_GREEN) -> go.Figure:
     """Gauge indicator for composite score or recession probability."""
@@ -74,9 +521,9 @@ def _gauge(value: float | None, title: str, max_val: float = 100,
             "axis": {"range": [0, max_val], "tickwidth": 1},
             "bar": {"color": C_BLUE},
             "steps": [
-                {"range": [0, max_val * 0.33], "color": low_color + "33"},
-                {"range": [max_val * 0.33, max_val * 0.66], "color": C_YELLOW + "33"},
-                {"range": [max_val * 0.66, max_val], "color": high_color + "33"},
+                {"range": [0, max_val * 0.33], "color": _hex_alpha(low_color, 0.2)},
+                {"range": [max_val * 0.33, max_val * 0.66], "color": _hex_alpha(C_YELLOW, 0.2)},
+                {"range": [max_val * 0.66, max_val], "color": _hex_alpha(high_color, 0.2)},
             ],
             "threshold": {
                 "line": {"color": C_RED, "width": 3},
@@ -104,6 +551,139 @@ def _fmt(v, decimals=2, suffix=""):
     if v is None:
         return "n/a"
     return f"{v:.{decimals}f}{suffix}"
+
+
+# ─── Indicator notes builder ──────────────────────────────────────────────────
+
+def _build_indicator_notes(info_dict: dict, current_values: dict, tab_label: str) -> list:
+    """Render a reference card grid for a tab's economic indicators."""
+    cards = []
+    for key, info in info_dict.items():
+        val_str = current_values.get(key) or "—"
+        cards.append(
+            dbc.Card(
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col(
+                            html.Strong(info["name"], style={"fontSize": "13px"}),
+                            width=8,
+                        ),
+                        dbc.Col(
+                            dbc.Badge(
+                                val_str,
+                                color="primary",
+                                className="ms-auto",
+                                style={"fontSize": "11px"},
+                            ),
+                            width=4,
+                            className="text-end",
+                        ),
+                    ], className="mb-1"),
+                    html.P(
+                        [html.Span("Source: ", style={"fontWeight": "600"}), info.get("source", "")],
+                        style={"fontSize": "11px", "color": "#666", "marginBottom": "4px"},
+                    ),
+                    html.P(
+                        info.get("what", ""),
+                        style={"fontSize": "12px", "color": "#444", "marginBottom": "4px"},
+                    ),
+                    html.P(
+                        [html.Span("Watch for: ", style={"fontWeight": "600"}), info.get("watch", "")],
+                        style={"fontSize": "12px", "marginBottom": "4px"},
+                    ),
+                    html.P(
+                        [
+                            html.Span("Limitation: ", style={"fontWeight": "600", "color": "#888"}),
+                            html.Span(info.get("limitation", ""), style={"color": "#888"}),
+                        ],
+                        style={"fontSize": "11px", "marginBottom": 0},
+                    ),
+                ], style={"padding": "10px 14px"}),
+                className="mb-2",
+                style={"border": "1px solid #dee2e6"},
+            )
+        )
+
+    return [
+        html.Hr(className="mt-3 mb-3"),
+        html.H6(
+            f"Indicator Reference — {tab_label}",
+            className="text-muted mb-2",
+            style={"fontSize": "13px", "letterSpacing": "0.05em"},
+        ),
+        dbc.Row([dbc.Col(c, md=6) for c in cards]),
+        html.P(
+            "Data sourced from FRED, BLS, Census Bureau, BEA, and yfinance. "
+            "Not financial advice.",
+            className="text-muted mt-2",
+            style={"fontSize": "11px"},
+        ),
+    ]
+
+
+def _macro_values(snapshot: dict) -> dict:
+    m = snapshot.get("macro", {})
+    gdp = m.get("real_gdp_growth_pct")
+    cpi = m.get("cpi_headline_yoy")
+    pce = m.get("pce_core_yoy")
+    return {
+        "gdp":      f"{gdp:.1f}% annualized" if gdp is not None else None,
+        "inflation": f"CPI {_fmt(cpi, 1)}% / Core PCE {_fmt(pce, 1)}%",
+        "fed_funds": f"{_fmt(m.get('fed_funds_rate'), 2)}%",
+        "m2":        f"YoY {_fmt(m.get('m2_yoy'), 1)}%",
+        "trade":     f"${_fmt(m.get('trade_balance_bn'), 0)}M",
+        "debt_gdp":  f"{_fmt(m.get('debt_to_gdp'), 1)}% of GDP",
+    }
+
+
+def _labor_values(snapshot: dict) -> dict:
+    lb = snapshot.get("labor", {})
+    return {
+        "u3_u6":        f"U-3 {_fmt(lb.get('unemployment_u3'), 1)}% / U-6 {_fmt(lb.get('unemployment_u6'), 1)}%",
+        "initial_claims": f"{_fmt(lb.get('initial_claims'), 0)}K weekly",
+        "lfpr":         f"Prime-age {_fmt(lb.get('prime_age_lfpr'), 1)}%",
+        "jolts":        f"Openings {_fmt(lb.get('job_openings_k'), 0)}K",
+        "beveridge":    f"U-3 {_fmt(lb.get('unemployment_u3'), 1)}% / Openings {_fmt(lb.get('job_openings_k'), 0)}K",
+        "sahm":         f"Sahm = {_fmt(lb.get('sahm_rule'), 2)}",
+    }
+
+
+def _housing_values(snapshot: dict) -> dict:
+    ho = snapshot.get("housing", {})
+    return {
+        "starts_permits":   f"Starts {_fmt(ho.get('housing_starts_k'), 0)}K",
+        "mortgage":         f"{_fmt(ho.get('mortgage_rate_30y'), 2)}%",
+        "case_shiller":     "Index level",
+        "case_shiller_yoy": f"YoY {_fmt(ho.get('case_shiller_yoy'), 1)}%",
+    }
+
+
+def _markets_values(snapshot: dict) -> dict:
+    mk = snapshot.get("markets", {})
+    yc = snapshot.get("yield_curve", {})
+    cu_au = None
+    copper = mk.get("copper")
+    gold = mk.get("gold")
+    if copper and gold:
+        cu_au = round(copper / gold * 100, 3)
+    return {
+        "equities":    f"SPX YoY {_fmt(mk.get('sp500_yoy'), 1)}%",
+        "vix":         f"VIX {_fmt(mk.get('vix'), 1)}",
+        "yield_curve": f"10Y {_fmt(yc.get('dgs10'), 2)}% / 2Y {_fmt(yc.get('dgs2'), 2)}%",
+        "spreads":     f"10Y-2Y {_fmt(yc.get('spread_10_2'), 2)} pp / 10Y-3M {_fmt(yc.get('spread_10_3m'), 2)} pp",
+        "commodities": f"WTI ${_fmt(mk.get('wti_crude'), 1)} / Gold ${_fmt(mk.get('gold'), 0)}",
+        "copper_gold": f"Cu/Au ratio {_fmt(cu_au, 3)}" if cu_au else "—",
+    }
+
+
+def _consumer_values(snapshot: dict) -> dict:
+    co = snapshot.get("consumer", {})
+    return {
+        "umich":      f"Sentiment {_fmt(co.get('umich_sentiment'), 1)}",
+        "retail":     f"Retail YoY {_fmt(co.get('retail_sales_yoy'), 1)}%",
+        "savings":    f"Savings rate {_fmt(co.get('personal_savings_rate'), 1)}%",
+        "industrial": f"IndPro YoY {_fmt(co.get('industrial_production_yoy'), 1)}% / CapUtil {_fmt(co.get('capacity_utilization'), 1)}%",
+    }
 
 
 # ─── Layout ───────────────────────────────────────────────────────────────────
@@ -261,6 +841,7 @@ def render_tab(n_intervals, tab):
                 dbc.Col(dcc.Graph(figure=_line_chart({"Trade Balance ($M)": trade}, "Trade Balance ($M)")), md=6),
                 dbc.Col(dcc.Graph(figure=_line_chart({"Debt/GDP %": debt_gdp}, "Federal Debt to GDP (%)")), md=6),
             ]),
+            *_build_indicator_notes(MACRO_INDICATOR_INFO, _macro_values(snapshot), "Macro"),
         ]
         return content, header, snapshot
 
@@ -346,6 +927,7 @@ def render_tab(n_intervals, tab):
                     ),
                 ),
             ]),
+            *_build_indicator_notes(LABOR_INDICATOR_INFO, _labor_values(snapshot), "Labor"),
         ]
         return content, header, snapshot
 
@@ -379,6 +961,7 @@ def render_tab(n_intervals, tab):
                     "Case-Shiller Home Price YoY %",
                 )), md=6),
             ]),
+            *_build_indicator_notes(HOUSING_INDICATOR_INFO, _housing_values(snapshot), "Housing"),
         ]
         return content, header, snapshot
 
@@ -451,6 +1034,7 @@ def render_tab(n_intervals, tab):
                     "Copper/Gold Ratio — Economic Activity Proxy",
                 )), md=6) if cu_au is not None else dbc.Col(),
             ]),
+            *_build_indicator_notes(MARKETS_INDICATOR_INFO, _markets_values(snapshot), "Markets"),
         ]
         return content, header, snapshot
 
@@ -483,6 +1067,7 @@ def render_tab(n_intervals, tab):
                     "Industrial Production YoY % & Capacity Utilization",
                 )), md=6),
             ]),
+            *_build_indicator_notes(CONSUMER_INDICATOR_INFO, _consumer_values(snapshot), "Consumer & Business"),
         ]
         return content, header, snapshot
 

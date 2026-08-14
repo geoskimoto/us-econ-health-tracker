@@ -24,9 +24,12 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles",
     # Third-party
+    "daphne",
+    "django.contrib.staticfiles",
+    "channels",
     "django_plotly_dash.apps.DjangoPlotlyDashConfig",
+    "dpd_static_support",
     "django_apscheduler",
     # Local
     "economy.apps.EconomyConfig",
@@ -41,6 +44,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_plotly_dash.middleware.BaseMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -62,6 +66,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.routing.application"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -95,6 +100,14 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "django_plotly_dash.finders.DashComponentFinder",
+    "django_plotly_dash.finders.DashAppDirectoryFinder",
+    "django_plotly_dash.finders.DashAssetFinder",
+]
+
 # ─── FRED & Anthropic ─────────────────────────────────────────────────────────
 
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
@@ -109,6 +122,21 @@ CACHE_DIR = BASE_DIR / "cache"
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"
 APSCHEDULER_RUN_NOW_TIMEOUT = 25
 
+# ─── Django Channels ──────────────────────────────────────────────────────────
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}
+
 # ─── django-plotly-dash ───────────────────────────────────────────────────────
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
+
+PLOTLY_DASH = {
+    # Serve Dash component JS from local staticfiles. CDN mode (serve_locally
+    # False) is broken with Dash 2.x: the npm packages on unpkg don't bundle
+    # plotly.js and pin dash-renderer 1.x, so dcc.Graph never renders.
+    "serve_locally": True,
+}

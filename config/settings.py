@@ -13,7 +13,8 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.environ.get(
-    "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"
+    "DJANGO_ALLOWED_HOSTS",
+    "econ-tracker.3rdplaces.io,econ-tracker.restore-trust.com,localhost,127.0.0.1",
 ).split(",")
 
 # ─── Applications ─────────────────────────────────────────────────────────────
@@ -42,9 +43,34 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Gates every request on the portal's apps_auth cookie. MUST come after
+    # AuthenticationMiddleware: it subclasses RemoteUserMiddleware, which
+    # needs request.user to already exist. AUTH_REQUIRED_GROUP is the single
+    # source of truth for the required group and the middleware raises
+    # ImproperlyConfigured if it is unset, so a misconfigured deploy fails
+    # rather than admitting everyone.
+    #
+    # Placed BEFORE BaseMiddleware (django_plotly_dash) so a Dash request is
+    # already authenticated -- request.user set, redirect-to-login already
+    # issued for an anonymous caller -- before Dash's own middleware runs.
+    # Confirmed by testing: dashboard/tests.py's DashGatingTests pass in this
+    # position (20/20); the alternative (after BaseMiddleware) was not tried
+    # since this one worked and there is no other reason to prefer it --
+    # BaseMiddleware does its own dispatch-table bookkeeping per request and
+    # has no auth-adjacent behavior that this ordering could interact with.
+    "apps_auth.django.JWTRemoteUserMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_plotly_dash.middleware.BaseMiddleware",
+]
+
+# Replaces the default ModelBackend. This disables password login, including
+# Django admin at /admin/ -- intended: the restore-trust.com portal becomes
+# the only way in. JWTRemoteUserBackend creates a local User row (unusable
+# password) for an SSO-authenticated username so request.user and any future
+# ForeignKey(User) keep working.
+AUTHENTICATION_BACKENDS = [
+    "apps_auth.django.JWTRemoteUserBackend",
 ]
 
 ROOT_URLCONF = "config.urls"

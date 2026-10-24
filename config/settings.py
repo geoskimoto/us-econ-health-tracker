@@ -39,6 +39,22 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves /static/ from within the app. nginx no longer aliases it off
+    # disk: `location ^~ /static/` outranks `location /`, so nginx was
+    # serving those files without the request reaching Django, which became a
+    # gating bypass once JWTRemoteUserMiddleware was added. It matters more
+    # here than elsewhere because this app's staticfiles/ carries the Dash
+    # component bundles (dpd_static_support / PLOTLY_COMPONENTS), so losing
+    # them leaves the dashboard rendering but non-interactive.
+    #
+    # Note this sits BEFORE JWTRemoteUserMiddleware, so static assets are
+    # served without authentication. Deliberate: they are CSS and JS with no
+    # user data, every gated app here already serves them to anonymous
+    # clients, and placing whitenoise after the gate would put a token decode
+    # and a database lookup on every asset request. The exposure this
+    # migration closes is anonymous access to the dashboard, its layout and
+    # its callback endpoint -- not to stylesheets.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

@@ -190,3 +190,16 @@ PLOTLY_DASH = {
     # plotly.js and pin dash-renderer 1.x, so dcc.Graph never renders.
     "serve_locally": True,
 }
+
+# --- Behind a TLS-terminating reverse proxy -----------------------------------
+# nginx terminates TLS and forwards over plain HTTP to Daphne, so Django sees
+# an http request unless told otherwise. Without this, request.is_secure() is
+# False and request.build_absolute_uri() returns an http:// URL -- which the
+# SSO middleware then puts in its login redirect's next= parameter. That sent
+# users to http://econ-tracker.restore-trust.com/ after login, relying on an
+# extra nginx 301 to get them back onto HTTPS, and made this app the only
+# gated one emitting a plaintext next= while its three siblings emitted https.
+#
+# Safe because nginx sets X-Forwarded-Proto unconditionally on every proxied
+# request, so a client cannot forge it: the header it sends is overwritten.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
